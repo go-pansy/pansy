@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func Test_Board(t *testing.T) {
+func Test_Signatory(t *testing.T) {
 	var (
-		board   = pansy.NewBoard("abc")
+		signer  = pansy.NewSignatory("abc")
 		payload = make(map[string]any)
 	)
 	payload = map[string]any{
@@ -18,19 +18,19 @@ func Test_Board(t *testing.T) {
 		"timestamp": "1717899356",
 	}
 
-	body, err := board.ToBase64String(payload)
+	body, err := signer.ToBase64String(payload)
 	if err != nil {
 		t.Log(err)
 		return
 	}
 
-	value, err := board.DecryptBase64String(body)
+	value, err := signer.DecryptBase64String(body)
 	if err != nil {
 		t.Log(err)
 		return
 	}
 
-	isOK := board.CheckSignature(value, payload["sign"].(string))
+	isOK := signer.CheckSignature(value, payload["sign"].(string))
 
 	t.Logf("解密的数据签名验证结果：%v", isOK)
 }

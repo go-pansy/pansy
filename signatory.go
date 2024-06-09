@@ -12,27 +12,27 @@ import (
 	"time"
 )
 
-var _ board = (*Board)(nil)
+var _ signer = (*Signatory)(nil)
 
-type board interface {
+type signer interface {
 	GenSignature(args map[string]any) string
 	ToBase64String(args map[string]any) (string, error)
 	DecryptBase64String(args string) (map[string]any, error)
 	CheckSignature(args map[string]any, sign string) bool
 }
 
-type Board struct {
+type Signatory struct {
 	appKey string
 }
 
-func NewBoard(appKey string) *Board {
-	return &Board{
+func NewSignatory(appKey string) *Signatory {
+	return &Signatory{
 		appKey: appKey,
 	}
 }
 
 // GenSignature implements board.
-func (b *Board) GenSignature(source map[string]any) string {
+func (s *Signatory) GenSignature(source map[string]any) string {
 	var (
 		keys   []string
 		code   string
@@ -60,7 +60,7 @@ func (b *Board) GenSignature(source map[string]any) string {
 		code += fmt.Sprintf("%s=%v&", v, source[v])
 	}
 
-	code = fmt.Sprintf("%skey=%v", code, b.appKey)
+	code = fmt.Sprintf("%skey=%v", code, s.appKey)
 
 	hasher.Write([]byte(code))
 	hb := hasher.Sum(nil)
@@ -70,12 +70,12 @@ func (b *Board) GenSignature(source map[string]any) string {
 }
 
 // CheckSignature implements board.
-func (b *Board) CheckSignature(source map[string]any, sign string) bool {
-	return b.GenSignature(source) == sign
+func (s *Signatory) CheckSignature(source map[string]any, sign string) bool {
+	return s.GenSignature(source) == sign
 }
 
 // DecryptBase64String implements board.
-func (b *Board) DecryptBase64String(str string) (map[string]any, error) {
+func (s *Signatory) DecryptBase64String(str string) (map[string]any, error) {
 	var (
 		payload map[string]any
 	)
@@ -97,7 +97,7 @@ func (b *Board) DecryptBase64String(str string) (map[string]any, error) {
 }
 
 // ToBase64String implements board.
-func (b *Board) ToBase64String(source map[string]any) (string, error) {
+func (s *Signatory) ToBase64String(source map[string]any) (string, error) {
 	// 去掉存在空值的键
 	for key, value := range source {
 		if value == nil {
@@ -115,7 +115,7 @@ func (b *Board) ToBase64String(source map[string]any) (string, error) {
 	}
 
 	if _, ok := source["sign"]; !ok {
-		source["sign"] = b.GenSignature(source)
+		source["sign"] = s.GenSignature(source)
 	}
 
 	content, err := sonic.Marshal(source)
