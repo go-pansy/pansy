@@ -1,7 +1,7 @@
 package test
 
 import (
-	"pansy"
+	"github.com/go-pansy/pansy"
 	"testing"
 )
 
