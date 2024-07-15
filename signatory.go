@@ -125,3 +125,18 @@ func (s *Signatory) ToBase64String(source map[string]any) (string, error) {
 
 	return base64.StdEncoding.EncodeToString(content), nil
 }
+
+func DecodeString[T any](args string, result *any) error {
+	body, err := base64.StdEncoding.DecodeString(args)
+	if err != nil {
+		return err
+	}
+
+	if err = sonic.Unmarshal(body, result); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func EncodeToString[T any]() {}
