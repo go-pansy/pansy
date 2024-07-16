@@ -126,7 +126,7 @@ func (s *Signatory) ToBase64String(source map[string]any) (string, error) {
 	return base64.StdEncoding.EncodeToString(content), nil
 }
 
-func DecodeString[T any](args string, result *any) error {
+func DecodeString[T any](args string, result *T) error {
 	body, err := base64.StdEncoding.DecodeString(args)
 	if err != nil {
 		return err
