@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bytedance/sonic"
+	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -40,17 +42,65 @@ func (s *Signatory) GenSignature(source map[string]any) string {
 		source["timestamp"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
-	var (
-		hasher = md5.New()
-		code   = s.JoinMap(source)
-	)
-	code = fmt.Sprintf("%s&key=%v", code, s.appKey)
+	values := url.Values{}
 
-	hasher.Write([]byte(code))
-	hb := hasher.Sum(nil)
-	sign := hex.EncodeToString(hb)
+	var addValues func(key string, value any)
+	addValues = func(key string, value any) {
+		v := reflect.ValueOf(value)
+		switch v.Kind() {
+		case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64, reflect.Bool:
 
-	return strings.ToUpper(sign)
+			strValue := fmt.Sprintf("%v", value)
+			if strValue == "" || strValue == "NULL" {
+				return
+			}
+			values.Add(key, strValue)
+
+		case reflect.Map:
+			for _, k := range v.MapKeys() {
+				addValues(fmt.Sprintf("%s[%s]", key, k.String()), v.MapIndex(k).Interface())
+			}
+
+		case reflect.Slice, reflect.Array:
+			for i := 0; i < v.Len(); i++ {
+				addValues(fmt.Sprintf("%s[%d]", key, i), v.Index(i).Interface())
+			}
+
+		default:
+			strValue := fmt.Sprintf("%v", value)
+			if strValue == "" || strValue == "NULL" {
+				return
+			}
+			values.Add(key, strValue)
+		}
+	}
+
+	for k, v := range source {
+		addValues(k, v)
+	}
+
+	// 对键进行排序
+	sortedKeys := make([]string, 0, len(values))
+	for key := range values {
+		sortedKeys = append(sortedKeys, key)
+	}
+	sort.Strings(sortedKeys)
+
+	// 拼接排序后的键值对
+	result := url.Values{}
+	for _, key := range sortedKeys {
+		for _, value := range values[key] {
+			result.Add(key, value)
+		}
+	}
+
+	// appKey
+	result.Add("key", s.appKey)
+
+	hash := md5.Sum([]byte(result.Encode()))
+	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
 
 func (s *Signatory) JoinMap(source map[string]any) string {
@@ -59,29 +109,17 @@ func (s *Signatory) JoinMap(source map[string]any) string {
 		code string
 	)
 	for k, v := range source {
-		switch v.(type) {
-		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
-			value := fmt.Sprintf("%v", v)
-			if value == "" || value == "NULL" {
-				continue
-			}
-			keys = append(keys, k)
-		case []map[string]any, []any:
-			// TODO: 递归
-		case map[string]any, any:
-			source[k] = s.JoinMap(v.(map[string]any))
-		default:
-			value := fmt.Sprintf("%v", v)
-			if value == "" || value == "NULL" {
-				continue
-			}
-			keys = append(keys, k)
+		value := fmt.Sprintf("%v", v)
+		if value == "" || value == "NULL" {
+			continue
 		}
+		keys = append(keys, k)
 	}
 
 	// 字典序 从小到大
 	sort.Strings(keys)
 	for _, v := range keys {
+		// 处理 map[string]any
 		code += fmt.Sprintf("%s=%v&", v, source[v])
 	}
 
@@ -159,3 +197,8 @@ func DecodeString[T any](args string, result *T) error {
 }
 
 func EncodeToString[T any]() {}
+
+func Decode[T any](args string) (T, error) {
+	var result T
+	return result, DecodeString(args, &result)
+}
