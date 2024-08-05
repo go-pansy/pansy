@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/go-pansy/pansy"
 	"testing"
 )
@@ -16,6 +17,11 @@ func Test_Signatory(t *testing.T) {
 		"c":         "789",
 		"sign":      "0C59AD369ED0E8F5AD06610EBBE6F263",
 		"timestamp": "1717899356",
+		"goods": []map[string]any{{
+			"x": "1",
+			"y": "2",
+			"z": "3",
+		}},
 	}
 
 	body, err := signer.ToBase64String(payload)
@@ -23,6 +29,8 @@ func Test_Signatory(t *testing.T) {
 		t.Log(err)
 		return
 	}
+
+	fmt.Println(body)
 
 	value, err := signer.DecryptBase64String(body)
 	if err != nil {

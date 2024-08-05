@@ -33,12 +33,6 @@ func NewSignatory(appKey string) *Signatory {
 
 // GenSignature implements board.
 func (s *Signatory) GenSignature(source map[string]any) string {
-	var (
-		keys   []string
-		code   string
-		hasher = md5.New()
-	)
-
 	// 直接删掉sign字段
 	delete(source, "sign")
 
@@ -46,12 +40,43 @@ func (s *Signatory) GenSignature(source map[string]any) string {
 		source["timestamp"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
+	var (
+		hasher = md5.New()
+		code   = s.JoinMap(source)
+	)
+	code = fmt.Sprintf("%s&key=%v", code, s.appKey)
+
+	hasher.Write([]byte(code))
+	hb := hasher.Sum(nil)
+	sign := hex.EncodeToString(hb)
+
+	return strings.ToUpper(sign)
+}
+
+func (s *Signatory) JoinMap(source map[string]any) string {
+	var (
+		keys []string
+		code string
+	)
 	for k, v := range source {
-		value := fmt.Sprintf("%v", v)
-		if value == "" || value == "NULL" {
-			continue
+		switch v.(type) {
+		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+			value := fmt.Sprintf("%v", v)
+			if value == "" || value == "NULL" {
+				continue
+			}
+			keys = append(keys, k)
+		case []map[string]any, []any:
+			// TODO: 递归
+		case map[string]any, any:
+			source[k] = s.JoinMap(v.(map[string]any))
+		default:
+			value := fmt.Sprintf("%v", v)
+			if value == "" || value == "NULL" {
+				continue
+			}
+			keys = append(keys, k)
 		}
-		keys = append(keys, k)
 	}
 
 	// 字典序 从小到大
@@ -60,13 +85,7 @@ func (s *Signatory) GenSignature(source map[string]any) string {
 		code += fmt.Sprintf("%s=%v&", v, source[v])
 	}
 
-	code = fmt.Sprintf("%skey=%v", code, s.appKey)
-
-	hasher.Write([]byte(code))
-	hb := hasher.Sum(nil)
-	sign := hex.EncodeToString(hb)
-
-	return strings.ToUpper(sign)
+	return code[0 : len(code)-1]
 }
 
 // CheckSignature implements board.
@@ -125,3 +144,18 @@ func (s *Signatory) ToBase64String(source map[string]any) (string, error) {
 
 	return base64.StdEncoding.EncodeToString(content), nil
 }
+
+func DecodeString[T any](args string, result *T) error {
+	body, err := base64.StdEncoding.DecodeString(args)
+	if err != nil {
+		return err
+	}
+
+	if err = sonic.Unmarshal(body, result); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func EncodeToString[T any]() {}
