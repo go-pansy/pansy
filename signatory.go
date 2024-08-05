@@ -106,29 +106,6 @@ func (s *Signatory) GenSignature(source map[string]any) string {
 	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
 
-func (s *Signatory) JoinMap(source map[string]any) string {
-	var (
-		keys []string
-		code string
-	)
-	for k, v := range source {
-		value := fmt.Sprintf("%v", v)
-		if value == "" || value == "NULL" {
-			continue
-		}
-		keys = append(keys, k)
-	}
-
-	// 字典序 从小到大
-	sort.Strings(keys)
-	for _, v := range keys {
-		// 处理 map[string]any
-		code += fmt.Sprintf("%s=%v&", v, source[v])
-	}
-
-	return code[0 : len(code)-1]
-}
-
 // CheckSignature implements board.
 func (s *Signatory) CheckSignature(source map[string]any, sign string) bool {
 	return s.GenSignature(source) == sign
