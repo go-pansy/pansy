@@ -97,9 +97,12 @@ func (s *Signatory) GenSignature(source map[string]any) string {
 	}
 
 	// appKey
-	result.Add("key", s.appKey)
+	var (
+		payload = result.Encode()
+	)
+	payload = fmt.Sprintf("%s&key=%s", payload, s.appKey)
 
-	hash := md5.Sum([]byte(result.Encode()))
+	hash := md5.Sum([]byte(payload))
 	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
 
