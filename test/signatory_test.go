@@ -8,13 +8,11 @@ import (
 
 func Test_Signatory(t *testing.T) {
 	var (
-		signer  = pansy.NewSignatory("abc")
+		signer  = pansy.NewSignatory("ds069ed4223ac1660f")
 		payload = make(map[string]any)
 	)
 	payload = map[string]any{
-		"machine_no": "16327128",
-		"password":   "332237",
-		"timestamp":  "1722825479",
+		"machine_no": "16327128", "password": "599240",
 		"os": map[string]any{
 			"version":   "12.0.0",
 			"platform":  "linux",
@@ -25,27 +23,12 @@ func Test_Signatory(t *testing.T) {
 			"serial_sn": "unknown",
 			"model_no":  "unknown",
 		},
-		"features": []map[string]any{
-			{
-				"name":  "feature1",
-				"value": "enabled",
-			},
-			{
-				"name":  "feature2",
-				"value": "disabled",
-			},
-			{
-				"name":  "feature3",
-				"value": "enabled",
-			},
-		},
+		"timestamp": "1722846152",
 	}
-
-	sign := signer.GenSignature(payload)
 
 	data, err := signer.ToBase64String(payload)
 	fmt.Println("To Base64 String:", data, err)
 
-	isOK := signer.CheckSignature(payload, sign)
+	isOK := signer.CheckSignature(payload, "AC7822FA3BA8DE95E73486CDC7B60CDF")
 	fmt.Println(isOK)
 }
